@@ -5,6 +5,7 @@
 .App-logo {
   animation: App-logo-spin infinite 20s linear;
   height: 10vmin;
+  margin-bottom: 10px;
 }
 
 .App-header {
@@ -20,6 +21,11 @@
 
 .App-link {
   color: #61dafb;
+}
+
+#search {
+  width: 300px;
+  margin-right: 5px;
 }
 
 @keyframes App-logo-spin {

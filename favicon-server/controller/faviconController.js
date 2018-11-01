@@ -2,16 +2,28 @@ const async = require('async');
 const axios = require('axios');
 const getContent = require('./content');
 
-// set number of urls to fetch favicons from
-const URLS_TO_FETCH = 200;
+const faviconController = {};
 
-// keep track of not found urls
-let notFound = 0;
+faviconController.getFavicon = async (req, res, next) => {
+  console.log('doing stuff in here with,', req.body);
+  const { url, getFresh } = req.body;
+  const verifiedUrl = await verifyUrl(url);
+  res.locals.url = await getFaviconForUrl({ url: verifiedUrl, getFresh });
+  next();
+}
+
+module.exports = faviconController;
+
+
+/* BEGIN HELPER FUNCTIONS */
+
+// set number of urls to fetch favicons from
+const NUM_TO_FETCH = 200;
 
 // makes a call to /favicon.ico with provided url
 const getFaviconForUrl = async ({ url, getFresh = true }) => {
   let faviconUrl;
-  await axios.get(`${url}/favicon.ico`, { timeout: URLS_TO_FETCH * 100 })
+  await axios.get(`${url}/favicon.ico`, { timeout: NUM_TO_FETCH * 100 })
     .then(res => {
       // if we get a 200 return that favicon url
       if (res.status === 200) faviconUrl = `${url}/favicon.ico`;
@@ -28,14 +40,18 @@ const getFaviconForUrl = async ({ url, getFresh = true }) => {
   return faviconUrl;
 };
 
+
+// keep track of not found urls
+let notFound = 0;
+
 // get all favicons
 const findAllFavicons = async () => {
-  console.time(`Approximate time to fetch ${URLS_TO_FETCH} urls`);
+  console.time(`Approximate time to fetch ${NUM_TO_FETCH} urls`);
   // first populate an array of URLs
   const res = await getContent();
-  const urls = res.slice(0, URLS_TO_FETCH);
+  const urls = res.slice(0, NUM_TO_FETCH);
 
-  async.mapLimit(urls, URLS_TO_FETCH / 10, async (url) => {
+  async.mapLimit(urls, NUM_TO_FETCH / 10, async (url) => {
     const response = await getFaviconForUrl({ url, getFresh: false });
     return { [url]: response };
   }, (err, results) => {
@@ -43,7 +59,7 @@ const findAllFavicons = async () => {
     // results is now an array of the response bodies
     console.log({ results });
     console.log({ notFound });
-    console.timeEnd(`Approximate time to fetch ${URLS_TO_FETCH} urls`);
+    console.timeEnd(`Approximate time to fetch ${NUM_TO_FETCH} urls`);
   });
 };
 
@@ -58,15 +74,3 @@ const verifyUrl = async (url) => {
     });
   return url;
 }
-
-const faviconController = {};
-
-faviconController.getFavicon = async (req, res, next) => {
-  console.log('doing stuff in here with,', req.body);
-  const { url, getFresh } = req.body;
-  const verifiedUrl = await verifyUrl(url);
-  res.locals.url = await getFaviconForUrl({ url: verifiedUrl, getFresh });
-  next();
-}
-
-module.exports = faviconController;
