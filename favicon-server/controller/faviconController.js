@@ -1,18 +1,74 @@
 const async = require('async');
 const axios = require('axios');
 const getContent = require('./content');
+const Favicon = require('../model/faviconModel');
+
 
 const faviconController = {};
 
+// checks database for an existing favicon
+// this is clearly not the way to do things
+// these should be set up as controller methods
+// so that requests can be made directly — but time :/
+faviconController.checkForExistingFavicon = async (verifiedUrl) => {
+  let faviconUrl;
+  try {
+    faviconUrl = await Favicon.find({ url: verifiedUrl });
+    return faviconUrl;
+  } catch (err) {
+    console.log(`Error fetching favicon from db: ${err}`);
+  }
+};
+
+// stores a favicon to the database
+// likewise, this should also be set up as middleware
+faviconController.saveFavicon = async (url, fav_url) => {
+  const favicon = new Favicon({
+    url,
+    fav_url,
+  });
+
+  try {
+    await favicon.save();
+  } catch (err) {
+    console.log(`Error saving favicon to db: ${err}`);
+  }
+};
+
+// verifies url, checks db for existing favicons,
+// and fetches fresh favicon if none found
 faviconController.getFavicon = async (req, res, next) => {
-  console.log('doing stuff in here with,', req.body);
-  const { url, getFresh } = req.body;
-  const verifiedUrl = await verifyUrl(url);
-  res.locals.url = await getFaviconForUrl({ url: verifiedUrl, getFresh });
-  next();
-}
+  const { url } = req.body;
+  let faviconUrl;
+  
+  try {
+    // verify url is valid 
+    const verifiedUrl = await verifyUrl(url);
+
+    // check database for existing favicon
+    // if found, store to res locals and respond
+    const foundFavicon = await faviconController.checkForExistingFavicon(verifiedUrl);
+    if (foundFavicon.length) {
+      console.log({foundFavicon})
+      res.locals.faviconUrl = foundFavicon[0];
+      return next();
+    }
+
+    // make a new request for the favicon url
+    faviconUrl = await getFaviconForUrl({ url: verifiedUrl });
+    console.log(`new favicon fetched`)
+    res.locals.faviconUrl = faviconUrl;
+
+    // store favicon to database
+    await faviconController.saveFavicon(verifiedUrl, faviconUrl);
+    next();
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+};
 
 module.exports = faviconController;
+
 
 
 /* BEGIN HELPER FUNCTIONS */
@@ -40,17 +96,19 @@ const getFaviconForUrl = async ({ url, getFresh = true }) => {
   return faviconUrl;
 };
 
-
 // keep track of not found urls
 let notFound = 0;
 
 // get all favicons
 const findAllFavicons = async () => {
   console.time(`Approximate time to fetch ${NUM_TO_FETCH} urls`);
-  // first populate an array of URLs
+  // populate the array of 200K URLs
   const res = await getContent();
   const urls = res.slice(0, NUM_TO_FETCH);
 
+  // tried to make this work with async but takes too long 
+  // with more time i would have attempted to set up a cluster module
+  // to create multiple child processes 
   async.mapLimit(urls, NUM_TO_FETCH / 10, async (url) => {
     const response = await getFaviconForUrl({ url, getFresh: false });
     return { [url]: response };

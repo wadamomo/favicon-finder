@@ -1,14 +1,14 @@
 import React, { Component } from 'react';
 import logo from './favicon-194x194.webp';
 import './App.css';
-import Favicon from './Favicon.jsx'
+import Favicon from './Favicon.jsx';
 
 class App extends Component {
   constructor() {
     super()
     this.state = {
       search: "",
-      url: "im a url",
+      faviconUrl: "",
     }
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -18,7 +18,7 @@ class App extends Component {
     this.setState({ search: e.target.value })
   }
 
-  handleSubmit() {
+  async handleSubmit() {
     let url = this.stripUrl(this.state.search);
 
     fetch('http://localhost:3333/favicon', {
@@ -30,7 +30,10 @@ class App extends Component {
     })
       .then(res => res.json())
       .then(data => {
-        console.log('this is your favicon URL', data)
+        console.log({data})
+        let faviconUrl = data.faviconUrl.fav_url || data.faviconUrl;
+        console.log({faviconUrl})
+        this.setState({ faviconUrl });
       })
       .catch(err => console.error(`Error in handleSubmit: ${err}`))
   }
@@ -48,13 +51,12 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        asdfasdfasdf
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
           <div id="favicon">
             <input id="search" placeholder="Enter Search..." onChange={this.handleChange}></input>
             <button id="submit" onClick={this.handleSubmit}>Find Favicon</button>
-            <Favicon url={this.state.url} />
+            <Favicon url={this.state.faviconUrl} />
           </div>
         </header>
       </div>
