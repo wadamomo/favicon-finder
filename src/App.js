@@ -12,13 +12,18 @@ class App extends Component {
     }
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleEnter = this.handleEnter.bind(this);
   }
 
   handleChange(e) {
     this.setState({ search: e.target.value })
   }
 
-  async handleSubmit() {
+  handleEnter(e) {
+    if (e.key !== 'Enter') { return; }
+    this.handleSubmit()
+  }
+  handleSubmit() {
     let url = this.stripUrl(this.state.search);
 
     fetch('http://localhost:3333/favicon', {
@@ -54,7 +59,7 @@ class App extends Component {
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
           <div id="favicon">
-            <input id="search" placeholder="Enter Search..." onChange={this.handleChange}></input>
+            <input id="search" placeholder="Enter Search..." onKeyPress={this.handleEnter} onChange={this.handleChange}></input>
             <button id="submit" onClick={this.handleSubmit}>Find Favicon</button>
             <Favicon url={this.state.faviconUrl} />
           </div>
